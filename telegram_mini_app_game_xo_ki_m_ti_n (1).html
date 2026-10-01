@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>XO Telegram Earn App</title>
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            background-color: var(--tg-theme-bg-color, #17212b);
+            color: var(--tg-theme-text-color, #f5f5f5);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        .tg-card {
+            background-color: var(--tg-theme-secondary-bg-color, #232e3c);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .tg-btn-primary {
+            background-color: var(--tg-theme-button-color, #2b5278);
+            color: var(--tg-theme-button-text-color, #ffffff);
+        }
+
+        .cell-x {
+            color: #ff5252;
+            text-shadow: 0 0 10px rgba(255, 82, 82, 0.4);
+        }
+
+        .cell-o {
+            color: #40c4ff;
+            text-shadow: 0 0 10px rgba(64, 196, 255, 0.4);
+        }
+
+        .pulse-btn {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between pb-20">
+
+    <!-- Top Bar / User Dashboard -->
+    <header class="p-4 bg-slate-900/80 backdrop-blur sticky top-0 z-50 border-b border-slate-800">
+        <div class="max-w-md mx-auto flex items-center justify-between">
+            <!-- User Info -->
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-lg shadow">
+                    <span id="user-avatar">U</span>
+                </div>
+                <div>
+                    <h1 id="user-name" class="font-semibold text-sm leading-tight text-slate-100">User Telegram</h1>
+                    <span class="text-xs text-slate-400">ID: <span id="user-id">000000</span></span>
+                </div>
+            </div>
+
+            <!-- Stats Badge -->
+            <div class="flex items-center space-x-2">
+                <!-- Coins -->
+                <div class="bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-full flex items-center space-x-1.5">
+                    <i class="fa-solid fa-coins text-amber-400 text-sm"></i>
+                    <span id="stat-coins" class="font-bold text-amber-400 text-sm">0</span>
+                </div>
+                <!-- Energy -->
+                <div class="bg-blue-500/10 border border-blue-500/30 px-3 py-1 rounded-full flex items-center space-x-1.5">
+                    <i class="fa-solid fa-bolt text-blue-400 text-sm"></i>
+                    <span id="stat-energy" class="font-bold text-blue-400 text-sm">5/5</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-md mx-auto w-full p-4 flex-grow">
+
+        <!-- VIEW 1: GAME TAB -->
+        <section id="tab-game" class="space-y-4">
+            
+            <!-- Ad & Extra Rewards Card -->
+            <div class="tg-card p-3 rounded-2xl flex items-center justify-between shadow-lg">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-circle-play"></i>
+                    </div>
+                    <div>
+                        <div class="font-bold text-sm">Adsgram Rewarded</div>
+                        <div class="text-xs text-slate-400">+10 Coins & +2 Lượt chơi</div>
+                    </div>
+                </div>
+                <button onclick="watchAdsgramAd()" class="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-bold px-3 py-2 rounded-xl text-xs flex items-center space-x-1 shadow pulse-btn">
+                    <i class="fa-solid fa-play"></i>
+                    <span>Xem QC</span>
+                </button>
+            </div>
+
+            <!-- Game Board Wrapper -->
+            <div class="tg-card p-5 rounded-3xl text-center space-y-4 shadow-xl">
+                <!-- Game Status Banner -->
+                <div id="game-status" class="py-2 px-4 rounded-xl bg-slate-800/80 font-medium text-sm text-blue-300 border border-slate-700/50">
+                    Lượt của bạn (X)
+                </div>
+
+                <!-- 3x3 Grid Board -->
+                <div id="board" class="grid grid-cols-3 gap-3 aspect-square max-w-[280px] mx-auto p-2 bg-slate-950/50 rounded-2xl border border-slate-800">
+                    <button class="cell tg-card rounded-xl text-4xl font-extrabold flex items-center justify-center transition-all duration-200 active:scale-95" data-index="0"></button>
+                    <button class="cell tg-card rounded-xl text-4xl font-extrabold flex items-center justify-center transition-all duration-200 active:scale-95" data-index="1"></button>
+                    <button class="cell tg-card rounded-xl text-4xl font-extrabold flex items-center justify-center transition-all duration-200 active:scale-95" data-index="2"></button>
+                    <button class="cell tg-card rounded-xl text-4xl font-extrabold flex items-center justify-center transition-all duration-200 active:scale-95" data-index="3"></button>
+                    <button class="cell tg-card rounded-xl text-4xl font-extrabold flex items-center justify-center transition-all duration-200 active:scale-95" data-index="4"></button>
+                    <button class="cell tg-card rounded-xl text-4xl font-extrabold flex items-center justify-center transition-all duration-200 active:scale-95" data-index="5"></button>
+                    <button class="cell tg-card rounded-xl text-4xl font-extrabold flex items-center justify-center transition-all duration-200 active:scale-95" data-index="6"></button>
+                    <button class="cell tg-card rounded-xl text-4xl font-extrabold flex items-center justify-center transition-all duration-200 active:scale-95" data-index="7"></button>
+                    <button class="cell tg-card rounded-xl text-4xl font-extrabold flex items-center justify-center transition-all duration-200 active:scale-95" data-index="8"></button>
+                </div>
+
+                <!-- Reset Button -->
+                <button onclick="resetGame()" class="w-full py-3 bg-slate-800 hover:bg-slate-700 rounded-xl font-semibold text-sm transition text-slate-200 border border-slate-700 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span>Chơi Ván Mới</span>
+                </button>
+            </div>
+            
+            <!-- Reward Rules Banner -->
+            <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                <div class="tg-card p-2 rounded-xl">
+                    <div class="text-green-400 font-bold">Thắng</div>
+                    <div class="text-slate-400">+5 Coins</div>
+                </div>
+                <div class="tg-card p-2 rounded-xl">
+                    <div class="text-amber-400 font-bold">Hòa</div>
+                    <div class="text-slate-400">+1 Coin</div>
+                </div>
+                <div class="tg-card p-2 rounded-xl">
+                    <div class="text-red-400 font-bold">Thua</div>
+                    <div class="text-slate-400">0 Coin</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 2: TASKS / OFFERWALL TAB -->
+        <section id="tab-tasks" class="space-y-4 hidden">
+            <div class="tg-card p-4 rounded-2xl border-l-4 border-indigo-500">
+                <h2 class="font-bold text-base text-slate-100 mb-1">Nhiệm Vụ Tải Game Kiếm Tiền</h2>
+                <p class="text-xs text-slate-400">Hoàn thành cài đặt và trải nghiệm game đối tác để nhận xu thưởng lớn.</p>
+            </div>
+
+            <!-- Task List -->
+            <div class="space-y-3" id="task-list">
+                <!-- Task 1 -->
+                <div class="tg-card p-3.5 rounded-2xl flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-12 h-12 rounded-xl bg-indigo-600/30 text-indigo-400 flex items-center justify-center text-2xl font-bold">
+                            <i class="fa-solid fa-gamepad"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-sm">Võ Lâm Legend</div>
+                            <div class="text-xs text-slate-400">Tải & Đạt Cấp 5</div>
+                            <div class="text-xs font-semibold text-amber-400 mt-0.5"><i class="fa-solid fa-coins"></i> +50 Coins</div>
+                        </div>
+                    </div>
+                    <button onclick="executeTask(this, 'Võ Lâm Legend', 50)" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-3.5 py-2 rounded-xl text-xs transition">
+                        Làm
+                    </button>
+                </div>
+
+                <!-- Task 2 -->
+                <div class="tg-card p-3.5 rounded-2xl flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-12 h-12 rounded-xl bg-purple-600/30 text-purple-400 flex items-center justify-center text-2xl font-bold">
+                            <i class="fa-solid fa-dice-five"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-sm">Vua Bắn Cá 3D</div>
+                            <div class="text-xs text-slate-400">Tải & Đăng ký tài khoản</div>
+                            <div class="text-xs font-semibold text-amber-400 mt-0.5"><i class="fa-solid fa-coins"></i> +80 Coins</div>
+                        </div>
+                    </div>
+                    <button onclick="executeTask(this, 'Vua Bắn Cá 3D', 80)" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-3.5 py-2 rounded-xl text-xs transition">
+                        Làm
+                    </button>
+                </div>
+
+                <!-- Task 3 -->
+                <div class="tg-card p-3.5 rounded-2xl flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-12 h-12 rounded-xl bg-emerald-600/30 text-emerald-400 flex items-center justify-center text-2xl font-bold">
+                            <i class="fa-solid fa-dragon"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-sm">Nông Trại Vui Vẻ</div>
+                            <div class="text-xs text-slate-400">Chơi đạt Level 3</div>
+                            <div class="text-xs font-semibold text-amber-400 mt-0.5"><i class="fa-solid fa-coins"></i> +120 Coins</div>
+                        </div>
+                    </div>
+                    <button onclick="executeTask(this, 'Nông Trại Vui Vẻ', 120)" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-3.5 py-2 rounded-xl text-xs transition">
+                        Làm
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 3: PAYOUT / WITHDRAW TAB -->
+        <section id="tab-payout" class="space-y-4 hidden">
+            <!-- Balance Overview -->
+            <div class="tg-card p-4 rounded-2xl bg-gradient-to-r from-blue-900/40 to-indigo-900/40 border border-blue-500/20 text-center space-y-1">
+                <span class="text-xs text-slate-400 uppercase tracking-wider">Số dư đổi thưởng</span>
+                <div class="text-3xl font-extrabold text-amber-400 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-coins text-2xl"></i>
+                    <span id="payout-balance">0</span>
+                    <span class="text-sm font-normal text-slate-300">Coins</span>
+                </div>
+                <div class="text-xs text-slate-400 pt-1">Tỷ lệ quy đổi: 100 Coins = 10,000 VNĐ</div>
+            </div>
+
+            <!-- Withdraw Form -->
+            <div class="tg-card p-4 rounded-2xl space-y-4">
+                <h3 class="font-bold text-sm text-slate-100 flex items-center space-x-2">
+                    <i class="fa-solid fa-wallet text-blue-400"></i>
+                    <span>Tạo Yêu Cầu Rút Tiền</span>
+                </h3>
+
+                <!-- Payment Method -->
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1.5">Phương thức thanh toán</label>
+                    <select id="payout-method" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                        <option value="MOMO">Ví Điện Tử MoMo</option>
+                        <option value="ZALOPAY">Ví ZaloPay</option>
+                        <option value="CARD">Thẻ Cào Điện Thoại</option>
+                        <option value="TON">Ví Telegram (Crypto TON)</option>
+                    </select>
+                </div>
+
+                <!-- Account Info -->
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1.5">Số điện thoại / Số tài khoản / Địa chỉ ví</label>
+                    <input type="text" id="payout-account" placeholder="Nhập SĐT hoặc địa chỉ nhận..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                </div>
+
+                <!-- Amount Threshold -->
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1.5">Chọn hạn mức rút</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" onclick="selectAmount(100, this)" class="amount-btn border border-blue-500/50 bg-blue-500/10 py-2 rounded-xl text-xs font-bold text-amber-400 active">
+                            100 Coins (10,000đ)
+                        </button>
+                        <button type="button" onclick="selectAmount(500, this)" class="amount-btn border border-slate-700 bg-slate-900 py-2 rounded-xl text-xs font-bold text-slate-300">
+                            500 Coins (50,000đ)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button onclick="processWithdrawal()" class="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-slate-950 font-bold rounded-xl text-sm transition shadow-lg flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-paper-plane"></i>
+                    <span>Rút Tiền Ngay</span>
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur border-t border-slate-800 z-50">
+        <div class="max-w-md mx-auto grid grid-cols-3 gap-1 p-2">
+            <!-- Nav Item 1 -->
+            <button onclick="switchTab('game')" id="nav-game" class="nav-btn flex flex-col items-center py-1.5 text-blue-400 font-semibold transition">
+                <i class="fa-solid fa-gamepad text-lg"></i>
+                <span class="text-[11px] mt-0.5">Chơi Game</span>
+            </button>
+            <!-- Nav Item 2 -->
+            <button onclick="switchTab('tasks')" id="nav-tasks" class="nav-btn flex flex-col items-center py-1.5 text-slate-400 font-semibold transition">
+                <i class="fa-solid fa-list-check text-lg"></i>
+                <span class="text-[11px] mt-0.5">Nhiệm Vụ</span>
+            </button>
+            <!-- Nav Item 3 -->
+            <button onclick="switchTab('payout')" id="nav-payout" class="nav-btn flex flex-col items-center py-1.5 text-slate-400 font-semibold transition">
+                <i class="fa-solid fa-wallet text-lg"></i>
+                <span class="text-[11px] mt-0.5">Rút Tiền</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Simulated Adsgram Ad Modal Overlay -->
+    <div id="ad-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[100] hidden flex flex-col items-center justify-center p-6 text-center">
+        <div class="w-16 h-16 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-3xl mb-4 animate-bounce">
+            <i class="fa-solid fa-rectangle-ad"></i>
+        </div>
+        <h3 class="text-xl font-bold text-white mb-1">Adsgram Rewarded Ad</h3>
+        <p class="text-xs text-slate-400 mb-6 max-w-xs">Đang giả lập phát Quảng Cáo Video trên Telegram Mini App...</p>
+        
+        <!-- Timer Counter -->
+        <div class="text-4xl font-extrabold text-amber-400 mb-6 tracking-wider" id="ad-timer">5s</div>
+
+        <div class="w-full max-w-xs bg-slate-800 h-2 rounded-full overflow-hidden">
+            <div id="ad-progress" class="bg-amber-400 h-full w-0 transition-all duration-1000"></div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Telegram WebApp SDK
+        const tg = window.Telegram?.WebApp;
+        if (tg) {
+            tg.ready();
+            tg.expand();
+        }
+
+        // App State
+        let userData = {
+            id: tg?.initDataUnsafe?.user?.id || Math.floor(100000 + Math.random() * 900000),
+            name: tg?.initDataUnsafe?.user?.first_name || "Game Player",
+            coins: parseInt(localStorage.getItem('xo_coins')) || 0,
+            energy: parseInt(localStorage.getItem('xo_energy')) || 5
+        };
+
+        let selectedWithdrawCoins = 100;
+
+        // Initialize User Interface
+        document.addEventListener("DOMContentLoaded", () => {
+            document.getElementById('user-name').innerText = userData.name;
+            document.getElementById('user-id').innerText = userData.id;
+            document.getElementById('user-avatar').innerText = userData.name.charAt(0).toUpperCase();
+            updateDashboardUI();
+        });
+
+        function updateDashboardUI() {
+            document.getElementById('stat-coins').innerText = userData.coins;
+            document.getElementById('stat-energy').innerText = userData.energy + "/5";
+            document.getElementById('payout-balance').innerText = userData.coins;
+            
+            localStorage.setItem('xo_coins', userData.coins);
+            localStorage.setItem('xo_energy', userData.energy);
+        }
+
+        // --- TAB NAVIGATION ---
+        function switchTab(tabName) {
+            document.getElementById('tab-game').classList.add('hidden');
+            document.getElementById('tab-tasks').classList.add('hidden');
+            document.getElementById('tab-payout').classList.add('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-blue-400');
+                btn.classList.add('text-slate-400');
+            });
+
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+            document.getElementById(`nav-${tabName}`).classList.remove('text-slate-400');
+            document.getElementById(`nav-${tabName}`).classList.add('text-blue-400');
+        }
+
+        // --- TIC TAC TOE GAME LOGIC ---
+        let boardState = ["", "", "", "", "", "", "", "", ""];
+        let humanPlayer = "X";
+        let aiPlayer = "O";
+        let isGameActive = true;
+
+        const cells = document.querySelectorAll('.cell');
+        const statusText = document.getElementById('game-status');
+
+        cells.forEach(cell => cell.addEventListener('click', handleCellClick));
+
+        function handleCellClick(e) {
+            const index = e.target.getAttribute('data-index');
+
+            if (boardState[index] !== "" || !isGameActive) return;
+
+            if (userData.energy <= 0) {
+                tg?.showAlert ? tg.showAlert("Bạn đã hết lượt chơi! Hãy xem quảng cáo để lấy thêm lượt.") : alert("Bạn đã hết lượt chơi! Hãy xem quảng cáo để lấy thêm lượt.");
+                return;
+            }
+
+            // Human move
+            makeMove(index, humanPlayer);
+
+            if (checkWin(boardState, humanPlayer)) {
+                endGame("Bạn thắng! (+5 Coins)", 5);
+                return;
+            } else if (isBoardFull(boardState)) {
+                endGame("Hòa nhau! (+1 Coin)", 1);
+                return;
+            }
+
+            // AI Move after short delay
+            isGameActive = false;
+            statusText.innerText = "AI đang suy nghĩ...";
+
+            setTimeout(() => {
+                const aiIndex = getMediumAIMove(boardState);
+                if (aiIndex !== null) {
+                    makeMove(aiIndex, aiPlayer);
+
+                    if (checkWin(boardState, aiPlayer)) {
+                        endGame("AI thắng! Bạn không nhận được điểm.", 0);
+                    } else if (isBoardFull(boardState)) {
+                        endGame("Hòa nhau! (+1 Coin)", 1);
+                    } else {
+                        isGameActive = true;
+                        statusText.innerText = "Lượt của bạn (X)";
+                    }
+                }
+            }, 400);
+        }
+
+        function makeMove(index, player) {
+            boardState[index] = player;
+            cells[index].innerText = player;
+            cells[index].classList.add(player === 'X' ? 'cell-x' : 'cell-o');
+        }
+
+        function endGame(message, reward) {
+            statusText.innerText = message;
+            isGameActive = false;
+
+            if (userData.energy > 0) userData.energy--;
+            if (reward > 0) userData.coins += reward;
+
+            updateDashboardUI();
+        }
+
+        function resetGame() {
+            boardState = ["", "", "", "", "", "", "", "", ""];
+            isGameActive = true;
+            statusText.innerText = "Lượt của bạn (X)";
+            cells.forEach(cell => {
+                cell.innerText = "";
+                cell.classList.remove('cell-x', 'cell-o');
+            });
+        }
+
+        // Medium AI Logic: Checks for block/win opportunity, else random
+        function getMediumAIMove(board) {
+            const availSpots = board.map((val, idx) => val === "" ? idx : null).filter(val => val !== null);
+
+            // 1. Can AI Win?
+            for (let spot of availSpots) {
+                board[spot] = aiPlayer;
+                if (checkWin(board, aiPlayer)) {
+                    board[spot] = "";
+                    return spot;
+                }
+                board[spot] = "";
+            }
+
+            // 2. Need to block Human?
+            for (let spot of availSpots) {
+                board[spot] = humanPlayer;
+                if (checkWin(board, humanPlayer)) {
+                    board[spot] = "";
+                    return spot;
+                }
+                board[spot] = "";
+            }
+
+            // 3. Random choice
+            if (availSpots.length > 0) {
+                return availSpots[Math.floor(Math.random() * availSpots.length)];
+            }
+            return null;
+        }
+
+        function checkWin(board, player) {
+            const winPatterns = [
+                [0,1,2], [3,4,5], [6,7,8],
+                [0,3,6], [1,4,7], [2,5,8],
+                [0,4,8], [2,4,6]
+            ];
+            return winPatterns.some(pattern => pattern.every(index => board[index] === player));
+        }
+
+        function isBoardFull(board) {
+            return board.every(cell => cell !== "");
+        }
+
+        // --- ADSGRAM REWARDED ADS SIMULATION ---
+        function watchAdsgramAd() {
+            /* 
+               Thực tế nhúng SDK Adsgram thật:
+               AdController.render({
+                   blockId: "YOUR_BLOCK_ID",
+                   onReward: () => { handleAdReward(); }
+               });
+            */
+            const modal = document.getElementById('ad-modal');
+            const timerEl = document.getElementById('ad-timer');
+            const progressEl = document.getElementById('ad-progress');
+
+            modal.classList.remove('hidden');
+            let timeLeft = 5;
+            timerEl.innerText = `${timeLeft}s`;
+            progressEl.style.width = '0%';
+
+            const interval = setInterval(() => {
+                timeLeft--;
+                timerEl.innerText = `${timeLeft}s`;
+                progressEl.style.width = `${((5 - timeLeft) / 5) * 100}%`;
+
+                if (timeLeft <= 0) {
+                    clearInterval(interval);
+                    modal.classList.add('hidden');
+                    
+                    // Reward user
+                    userData.coins += 10;
+                    userData.energy += 2;
+                    updateDashboardUI();
+
+                    if (tg?.showAlert) {
+                        tg.showAlert("Thành công! Bạn đã nhận được +10 Coins và +2 Lượt chơi.");
+                    } else {
+                        alert("Thành công! Bạn đã nhận được +10 Coins và +2 Lượt chơi.");
+                    }
+                }
+            }, 1000);
+        }
+
+        // --- OFFERWALL TASKS LOGIC ---
+        function executeTask(button, taskName, reward) {
+            button.disabled = true;
+            button.innerText = "Đang kiểm tra...";
+            button.classList.replace('bg-indigo-600', 'bg-slate-700');
+
+            setTimeout(() => {
+                userData.coins += reward;
+                updateDashboardUI();
+
+                button.innerText = "Đã xong ✓";
+                button.classList.replace('bg-slate-700', 'bg-emerald-600');
+
+                if (tg?.showAlert) {
+                    tg.showAlert(`Nhiệm vụ "${taskName}" thành công! Nhận +${reward} Coins.`);
+                } else {
+                    alert(`Nhiệm vụ "${taskName}" thành công! Nhận +${reward} Coins.`);
+                }
+            }, 2500);
+        }
+
+        // --- WITHDRAWAL LOGIC ---
+        function selectAmount(amount, el) {
+            selectedWithdrawCoins = amount;
+            document.querySelectorAll('.amount-btn').forEach(btn => {
+                btn.classList.remove('border-blue-500/50', 'bg-blue-500/10', 'text-amber-400');
+                btn.classList.add('border-slate-700', 'bg-slate-900', 'text-slate-300');
+            });
+            el.classList.replace('border-slate-700', 'border-blue-500/50');
+            el.classList.replace('bg-slate-900', 'bg-blue-500/10');
+            el.classList.replace('text-slate-300', 'text-amber-400');
+        }
+
+        function processWithdrawal() {
+            const account = document.getElementById('payout-account').value.trim();
+            const method = document.getElementById('payout-method').value;
+
+            if (!account) {
+                tg?.showAlert ? tg.showAlert("Vui lòng nhập số điện thoại hoặc địa chỉ nhận!") : alert("Vui lòng nhập số điện thoại hoặc địa chỉ nhận!");
+                return;
+            }
+
+            if (userData.coins < selectedWithdrawCoins) {
+                tg?.showAlert ? tg.showAlert(`Bạn không đủ số dư! Cần ít nhất ${selectedWithdrawCoins} Coins.`) : alert(`Bạn không đủ số dư! Cần ít nhất ${selectedWithdrawCoins} Coins.`);
+                return;
+            }
+
+            // Deduct and notify
+            userData.coins -= selectedWithdrawCoins;
+            updateDashboardUI();
+            document.getElementById('payout-account').value = "";
+
+            const successMsg = `Đã tạo lệnh rút ${selectedWithdrawCoins} Coins về [${method}: ${account}]. Hệ thống sẽ xử lý trong vòng 24h!`;
+            tg?.showAlert ? tg.showAlert(successMsg) : alert(successMsg);
+        }
+    </script>
+</body>
+</html>
